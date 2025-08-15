@@ -1,7 +1,10 @@
 import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool } from "@neondatabase/serverless";
+import { Pool, neonConfig } from "@neondatabase/serverless";
 import { eq } from "drizzle-orm";
+import ws from "ws";
 import { users, type User, type InsertUser } from "@shared/schema";
+
+neonConfig.webSocketConstructor = ws;
 
 // modify the interface with any CRUD methods
 // you might need
