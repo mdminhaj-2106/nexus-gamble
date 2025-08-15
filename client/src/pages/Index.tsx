@@ -13,6 +13,7 @@ type GamePhase = 'landing' | 'round1' | 'leaderboard1' | 'round2' | 'leaderboard
 const Index = () => {
   const [gamePhase, setGamePhase] = useState<GamePhase>('landing');
   const [playerName, setPlayerName] = useState("");
+  const [playerId, setPlayerId] = useState<number | null>(null);
   const [credits, setCredits] = useState(10000);
   const [round, setRound] = useState(0);
 
@@ -58,8 +59,9 @@ const Index = () => {
     return players;
   };
 
-  const handleStartGame = (name: string) => {
+  const handleStartGame = (name: string, userId: number) => {
     setPlayerName(name);
+    setPlayerId(userId);
     setGamePhase('round1');
     setRound(1);
     toast({

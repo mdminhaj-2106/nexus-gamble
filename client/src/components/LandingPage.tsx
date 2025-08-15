@@ -1,24 +1,55 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Rocket, Gamepad2, Trophy, Zap } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import rocketHero from "@/assets/rocket-hero.jpg";
 
 interface LandingPageProps {
-  onStartGame: (playerName: string) => void;
+  onStartGame: (playerName: string, userId: number) => void;
+}
+
+interface User {
+  id: number;
+  username: string;
+  balance: number;
 }
 
 export const LandingPage = ({ onStartGame }: LandingPageProps) => {
   const [playerName, setPlayerName] = useState("");
-  const [isRegistering, setIsRegistering] = useState(false);
+
+  const registerMutation = useMutation({
+    mutationFn: async (username: string): Promise<User> => {
+      const response = await fetch("/api/users/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+      if (!response.ok) throw new Error("Failed to register user");
+      return response.json();
+    },
+    onSuccess: (user) => {
+      toast({
+        title: "Registration Successful!",
+        description: `Welcome to Nexus Gamble, ${user.username}! Starting balance: ₡${user.balance.toLocaleString()}`,
+      });
+      onStartGame(user.username, user.id);
+    },
+    onError: (error) => {
+      toast({
+        title: "Registration Failed",
+        description: "Please try again with a different username.",
+        variant: "destructive",
+      });
+      console.error("Registration error:", error);
+    },
+  });
 
   const handleStartGame = () => {
     if (playerName.trim()) {
-      setIsRegistering(true);
-      setTimeout(() => {
-        onStartGame(playerName.trim());
-      }, 1000);
+      registerMutation.mutate(playerName.trim());
     }
   };
 
@@ -69,22 +100,22 @@ export const LandingPage = ({ onStartGame }: LandingPageProps) => {
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
                 className="text-lg h-12 bg-muted/50 border-primary/30 focus:border-primary text-center font-medium"
-                disabled={isRegistering}
+                disabled={registerMutation.isPending}
                 onKeyPress={(e) => e.key === 'Enter' && handleStartGame()}
               />
             </div>
             
             <Button
               onClick={handleStartGame}
-              disabled={!playerName.trim() || isRegistering}
+              disabled={!playerName.trim() || registerMutation.isPending}
               variant="hero"
               size="lg"
               className="w-full h-14 text-xl"
             >
-              {isRegistering ? (
+              {registerMutation.isPending ? (
                 <div className="flex items-center gap-2">
                   <Zap className="w-5 h-5 animate-spin" />
-                  Initializing...
+                  Registering...
                 </div>
               ) : (
                 <div className="flex items-center gap-2">

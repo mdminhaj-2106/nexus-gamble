@@ -3,6 +3,34 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // User registration route
+  app.post("/api/users/register", async (req, res) => {
+    try {
+      const { username } = req.body;
+      
+      if (!username || username.trim().length < 2) {
+        return res.status(400).json({ message: "Username must be at least 2 characters long" });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(username.trim());
+      if (existingUser) {
+        return res.json(existingUser); // Return existing user
+      }
+
+      // Create new user with default password and balance
+      const newUser = await storage.createUser({
+        username: username.trim(),
+        password: "temp_password", // In a real app, this would be properly handled
+      });
+      
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Failed to register user" });
+    }
+  });
+
   // Admin routes
   app.get("/api/admin/users", async (req, res) => {
     try {
