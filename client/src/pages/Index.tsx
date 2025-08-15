@@ -70,46 +70,99 @@ const Index = () => {
     });
   };
 
-  const handleRound1Complete = (bet: number, choice: number) => {
-    // Simulate win/loss
-    const win = Math.random() > 0.4; // 60% win chance
-    const multiplier = win ? 2.5 : 0;
-    const newCredits = credits - bet + (bet * multiplier);
-    
-    setCredits(Math.floor(newCredits));
-    setGamePhase('leaderboard1');
-    
-    toast({
-      title: win ? "Rocket Victory!" : "Rocket Crashed!",
-      description: win 
-        ? `Your rocket won! +₡${Math.floor(bet * multiplier - bet).toLocaleString()}`
-        : `Your rocket didn't make it. -₡${bet.toLocaleString()}`,
-      variant: win ? "default" : "destructive"
-    });
+  const handleRound1Complete = async (bet: number, choice: number) => {
+    try {
+      // Fetch admin-set result
+      const response = await fetch('/api/game/results');
+      const gameResults = await response.json();
+      
+      // Use admin result or fallback to random
+      const winningRocket = gameResults.round1Winner || Math.floor(Math.random() * 3) + 1;
+      const win = choice === winningRocket;
+      const multiplier = win ? 2.5 : 0;
+      const newCredits = credits - bet + (bet * multiplier);
+      
+      setCredits(Math.floor(newCredits));
+      setGamePhase('leaderboard1');
+      
+      toast({
+        title: win ? `Rocket ${winningRocket} Victory!` : `Rocket ${winningRocket} Won!`,
+        description: win 
+          ? `You chose the winning rocket! +₡${Math.floor(bet * multiplier - bet).toLocaleString()}`
+          : `You chose rocket ${choice}, but rocket ${winningRocket} won. -₡${bet.toLocaleString()}`,
+        variant: win ? "default" : "destructive"
+      });
+    } catch (error) {
+      // Fallback to random if API fails
+      const win = Math.random() > 0.4;
+      const multiplier = win ? 2.5 : 0;
+      const newCredits = credits - bet + (bet * multiplier);
+      
+      setCredits(Math.floor(newCredits));
+      setGamePhase('leaderboard1');
+      
+      toast({
+        title: win ? "Rocket Victory!" : "Rocket Crashed!",
+        description: win 
+          ? `Your rocket won! +₡${Math.floor(bet * multiplier - bet).toLocaleString()}`
+          : `Your rocket didn't make it. -₡${bet.toLocaleString()}`,
+        variant: win ? "default" : "destructive"
+      });
+    }
   };
 
-  const handleRound2Complete = (bet: number, prediction: number) => {
-    // Simulate projectile result
-    const actualRange = Math.floor(Math.random() * 900) + 100; // 100-1000
-    const accuracy = Math.abs(actualRange - prediction);
-    const win = accuracy <= 100; // Within 100m = win
-    
-    let multiplier = 0;
-    if (accuracy <= 20) multiplier = 5;
-    else if (accuracy <= 50) multiplier = 3;
-    else if (accuracy <= 100) multiplier = 2;
-    
-    const newCredits = credits - bet + (bet * multiplier);
-    setCredits(Math.floor(newCredits));
-    setGamePhase('leaderboard2');
-    
-    toast({
-      title: `Target: ${actualRange}m`,
-      description: win 
-        ? `Amazing shot! Off by ${accuracy}m. +₡${Math.floor(bet * multiplier - bet).toLocaleString()}`
-        : `Missed! Off by ${accuracy}m. -₡${bet.toLocaleString()}`,
-      variant: win ? "default" : "destructive"
-    });
+  const handleRound2Complete = async (bet: number, prediction: number) => {
+    try {
+      // Fetch admin-set result
+      const response = await fetch('/api/game/results');
+      const gameResults = await response.json();
+      
+      // Use admin result or fallback to random
+      const actualRange = gameResults.round2Range || Math.floor(Math.random() * 900) + 100;
+      const accuracy = Math.abs(actualRange - prediction);
+      const win = accuracy <= 100; // Within 100m = win
+      
+      let multiplier = 0;
+      if (accuracy <= 20) multiplier = 5;
+      else if (accuracy <= 50) multiplier = 3;
+      else if (accuracy <= 100) multiplier = 2;
+      
+      const newCredits = credits - bet + (bet * multiplier);
+      
+      setCredits(Math.floor(newCredits));
+      setGamePhase('leaderboard2');
+      
+      toast({
+        title: `Target: ${actualRange}m`,
+        description: win 
+          ? `Amazing shot! Off by ${accuracy}m. +₡${Math.floor(bet * multiplier - bet).toLocaleString()}`
+          : `Missed! Off by ${accuracy}m. -₡${bet.toLocaleString()}`,
+        variant: win ? "default" : "destructive"
+      });
+    } catch (error) {
+      // Fallback to random if API fails
+      const actualRange = Math.floor(Math.random() * 900) + 100;
+      const accuracy = Math.abs(actualRange - prediction);
+      const win = accuracy <= 100;
+      
+      let multiplier = 0;
+      if (accuracy <= 20) multiplier = 5;
+      else if (accuracy <= 50) multiplier = 3;
+      else if (accuracy <= 100) multiplier = 2;
+      
+      const newCredits = credits - bet + (bet * multiplier);
+      
+      setCredits(Math.floor(newCredits));
+      setGamePhase('leaderboard2');
+      
+      toast({
+        title: `Target: ${actualRange}m`,
+        description: win 
+          ? `Amazing shot! Off by ${accuracy}m. +₡${Math.floor(bet * multiplier - bet).toLocaleString()}`
+          : `Missed! Off by ${accuracy}m. -₡${bet.toLocaleString()}`,
+        variant: win ? "default" : "destructive"
+      });
+    }
   };
 
   const handleRound3Complete = (totalBet: number, choices: number[]) => {

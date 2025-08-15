@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Users, DollarSign, Settings } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Users, DollarSign, Settings, Rocket, Target } from "lucide-react";
 
 interface User {
   id: number;
@@ -16,10 +18,54 @@ interface User {
 
 const Admin = () => {
   const [editingBalance, setEditingBalance] = useState<{ userId: number; balance: string } | null>(null);
+  const [round1Result, setRound1Result] = useState<number | null>(null);
+  const [round2Result, setRound2Result] = useState<number | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: users = [], isLoading } = useQuery<User[]>({
+  const { data: users = [], isLoading, error } = useQuery<User[]>({
     queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/users");
+      if (!response.ok) throw new Error('Failed to fetch users');
+      return response.json();
+    },
+    refetchInterval: 2000, // Refresh every 2 seconds
+  });
+
+  const saveRound1Mutation = useMutation({
+    mutationFn: async (winner: number) => {
+      const response = await fetch("/api/admin/round1", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ winner }),
+      });
+      if (!response.ok) throw new Error("Failed to save round 1 result");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Round 1 Set!",
+        description: `Rocket ${data.winner} will win in Round 1`,
+      });
+    },
+  });
+
+  const saveRound2Mutation = useMutation({
+    mutationFn: async (range: number) => {
+      const response = await fetch("/api/admin/round2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ range }),
+      });
+      if (!response.ok) throw new Error("Failed to save round 2 result");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Round 2 Set!",
+        description: `Projectile will land at ${data.range}m`,
+      });
+    },
   });
 
   const updateBalanceMutation = useMutation({
@@ -83,6 +129,65 @@ const Admin = () => {
       <div className="flex items-center gap-2 mb-6">
         <Settings className="h-8 w-8" />
         <h1 className="text-3xl font-bold">Admin Panel</h1>
+      </div>
+
+      {/* Stats Cards */}
+      {/* Game Controls */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <Card data-testid="round1-control">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Round 1 Control</CardTitle>
+            <Rocket className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label>Winning Rocket</Label>
+              <Select value={round1Result?.toString() || ""} onValueChange={(value) => {
+                const winner = parseInt(value);
+                setRound1Result(winner);
+                saveRound1Mutation.mutate(winner);
+              }}>
+                <SelectTrigger data-testid="round1-select">
+                  <SelectValue placeholder="Select winning rocket..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Rocket 1</SelectItem>
+                  <SelectItem value="2">Rocket 2</SelectItem>
+                  <SelectItem value="3">Rocket 3</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Current: {round1Result ? `Rocket ${round1Result}` : 'Not set'}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-testid="round2-control">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Round 2 Control</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label>Projectile Range (100-1000m)</Label>
+              <Input
+                type="number"
+                min="100"
+                max="1000"
+                value={round2Result || ""}
+                onChange={(e) => {
+                  const range = parseInt(e.target.value);
+                  setRound2Result(range);
+                  if (range >= 100 && range <= 1000) {
+                    saveRound2Mutation.mutate(range);
+                  }
+                }}
+                placeholder="Enter range..."
+                data-testid="round2-input"
+              />
+              <p className="text-xs text-muted-foreground">Current: {round2Result ? `${round2Result}m` : 'Not set'}</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Stats Cards */}

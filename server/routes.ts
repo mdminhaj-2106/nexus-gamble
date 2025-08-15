@@ -31,6 +31,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Game control storage
+  let gameResults = {
+    round1Winner: null as number | null,
+    round2Range: null as number | null
+  };
+
   // Admin routes
   app.get("/api/admin/users", async (req, res) => {
     try {
@@ -39,6 +45,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch users" });
     }
+  });
+
+  // Game control routes
+  app.post("/api/admin/round1", async (req, res) => {
+    try {
+      const { winner } = req.body;
+      if (!winner || ![1, 2, 3].includes(winner)) {
+        return res.status(400).json({ message: "Winner must be 1, 2, or 3" });
+      }
+      gameResults.round1Winner = winner;
+      res.json({ winner, message: "Round 1 result set successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to set round 1 result" });
+    }
+  });
+
+  app.post("/api/admin/round2", async (req, res) => {
+    try {
+      const { range } = req.body;
+      if (!range || range < 100 || range > 1000) {
+        return res.status(400).json({ message: "Range must be between 100 and 1000" });
+      }
+      gameResults.round2Range = range;
+      res.json({ range, message: "Round 2 result set successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to set round 2 result" });
+    }
+  });
+
+  app.get("/api/game/results", async (req, res) => {
+    res.json(gameResults);
   });
 
   app.patch("/api/admin/users/:id/balance", async (req, res) => {
