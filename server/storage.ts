@@ -1,3 +1,6 @@
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool } from "@neondatabase/serverless";
+import { eq } from "drizzle-orm";
 import { users, type User, type InsertUser } from "@shared/schema";
 
 // modify the interface with any CRUD methods
@@ -9,31 +12,27 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  currentId: number;
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
-  constructor() {
-    this.users = new Map();
-    this.currentId = 1;
-  }
+const db = drizzle(pool);
 
+export class PostgreSQLStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0] || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0] || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new PostgreSQLStorage();
